@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,6 +60,7 @@ func RunServer(config *cfg.Properties) {
 	router.DELETE("/images", handler.DeleteImage)
 
 	router.NoRoute(func(ctx *gin.Context) { ctx.JSON(http.StatusNotFound, gin.H{}) })
+	pprof.Register(router)
 	// Start the server
 	router.Run(fmt.Sprintf(":%s", config.Server.Port))
 }
