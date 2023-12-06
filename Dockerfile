@@ -24,5 +24,5 @@ WORKDIR /
 
 # install binary
 COPY --from=builder /workspace/demoapp .
-
+EXPOSE 8088
 ENTRYPOINT ["/demoapp"]

@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mmiapp-nginx
+  namespace: mmi
+spec:
+  selector:
+    app: mmiapp-nginx
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+  namespace: mmi
+data:
+  nginx.conf: |
+    server {
+    listen 8080 ;
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+    location /api {  
+      location = /api {  
+       proxy_pass http://mmiapp:8000;
+      }
+      location ~ /api(.*)$ {  
+       proxy_pass http://mmiapp:8000/api$1;
+      }
+      
+    }
+    }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: mmiapp-nginx
+  name: nginxmmi
+  namespace: mmi
+spec:
+  containers:
+    - image: mmiapp:nginx
+      imagePullPolicy: IfNotPresent
+      name: mmi-nginx
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources: {}
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d/nginx.conf
+          subPath: nginx.conf
+  volumes:
+    - name: config-volume
+      configMap:
+        name: nginx
