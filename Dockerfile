@@ -13,7 +13,7 @@ RUN go mod download
 COPY src/ src/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o sidecar-injector ./src/cmd/
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o demoapp ./src/cmd/
 
 
 FROM alpine:latest
@@ -24,6 +24,6 @@ RUN apk --no-cache add curl
 WORKDIR /
 
 # install binary
-COPY --from=builder /workspace/sidecar-injector .
-RUN mkdir /token
-ENTRYPOINT ["/sidecar-injector"]
+COPY --from=builder /workspace/demoapp .
+EXPOSE 8088
+ENTRYPOINT ["/demoapp"]

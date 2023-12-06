@@ -169,18 +169,18 @@ func (a *AppHandler) Callback(c *gin.Context) {
 	log.Print("In callback")
 	callback, _ := c.Cookie("callback")
 	log.Printf("callback %v", callback)
-	origin := c.Request.Header.Get("Origin")
-	log.Printf("1. origin %v", origin)
-	state, ok := c.GetQuery("state")
-	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no state in query"})
-		return
-	}
-	code, ok := c.GetQuery("code")
-	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no code in query"})
-		return
-	}
+	//origin := c.Request.Header.Get("Origin")
+	log.Printf("1. origin %v", c.Request)
+	state := c.Query("state")
+	//if !ok {
+	//	c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no state in query"})
+	//	return
+	//}
+	code := c.Query("code")
+	//if !ok {
+	//	c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no code in query"})
+	//	return
+	//}
 	if state != a.oauthStateString {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no current state found"})
 		return
@@ -204,9 +204,9 @@ func (a *AppHandler) Callback(c *gin.Context) {
 	log.Printf("get token r: %v", token.Expiry)
 
 	// Write access, refresh, and id tokens to http-only cookies
-	c.SetCookie(a.AccessTokenCookieName, token.AccessToken, int(3600), "/", "localhost", false, false)
-	c.SetCookie(a.RefreshTokenCookieName, token.RefreshToken, int(3600), "/", "localhost", false, false)
-	c.SetCookie(a.IDTokenCookieName, rawIDToken, int(3600), "/", "localhost", false, false)
+	c.SetCookie(a.AccessTokenCookieName, token.AccessToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
+	c.SetCookie(a.RefreshTokenCookieName, token.RefreshToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
+	c.SetCookie(a.IDTokenCookieName, rawIDToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
 	a.dataStore.UploadUser(token.AccessToken, token.RefreshToken)
 	cookie, err := c.Cookie("callback")
 	log.Printf("current cookie is %v", cookie)
