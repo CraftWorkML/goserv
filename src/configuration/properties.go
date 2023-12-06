@@ -20,7 +20,7 @@ type (
 	}
 
 	AuthProperties struct {
-		Host                   string        `env:"HOST" envDefault:"https://gitlab.aramcoinnovations.com"`
+		Host                   string        `env:"HOST" envDefault:"https://gitlab.my.com"`
 		ID                     string        `env:"ID"`
 		Secret                 string        `env:"SECRET"`
 		Redirect               string        `env:"REDIRECT_URL" envDefault:"http://localhost:8088/callback"`
@@ -44,7 +44,7 @@ type (
 	}
 
 	S3Properties struct {
-		Host        string        `env:"HOST" envDefault:"https://s3.aramcoinnovations.com"`
+		Host        string        `env:"HOST" envDefault:"https://s3.minio.com"`
 		Port        string        `env:"PORT" envDefault:"9000"`
 		AccessKey   string        `env:"ACCESS_KEY"`
 		SecretKey   string        `env:"SECRET_KEY"`

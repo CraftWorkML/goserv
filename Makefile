@@ -4,7 +4,7 @@ patchVersion = 0
 version = $(majorVersion).$(minorVersion).$(patchVersion)
 
 binaryPath = ./target/
-registry = registry.aramcoinnovations.com/iss/infrastructure
+registry = registry.com
 image = v8s-controller
 tag = deploy-$(version)
 

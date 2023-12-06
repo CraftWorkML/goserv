@@ -204,9 +204,9 @@ func (a *AppHandler) Callback(c *gin.Context) {
 	log.Printf("get token r: %v", token.Expiry)
 
 	// Write access, refresh, and id tokens to http-only cookies
-	c.SetCookie(a.AccessTokenCookieName, token.AccessToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
-	c.SetCookie(a.RefreshTokenCookieName, token.RefreshToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
-	c.SetCookie(a.IDTokenCookieName, rawIDToken, int(3600), "/", "demoapp.aramcoinnovations.com", false, false)
+	c.SetCookie(a.AccessTokenCookieName, token.AccessToken, int(3600), "/", "a.hostname", false, false)
+	c.SetCookie(a.RefreshTokenCookieName, token.RefreshToken, int(3600), "/", "a.hostname", false, false)
+	c.SetCookie(a.IDTokenCookieName, rawIDToken, int(3600), "/", "a.hostname", false, false)
 	a.dataStore.UploadUser(token.AccessToken, token.RefreshToken)
 	cookie, err := c.Cookie("callback")
 	log.Printf("current cookie is %v", cookie)
