@@ -1,0 +1,14 @@
+bin/
+target/
+generated/
+vendor/
+.vscode/
+.idea
+*.crt
+*.cert
+*.key
+*.pem
+*.tar
+*.env
+kubeconfig*
+coverage*
