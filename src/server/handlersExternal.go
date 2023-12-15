@@ -38,6 +38,11 @@ type (
 	}
 )
 
+const (
+	contentTypeImage = "image/png"
+	contentTypeAudio = "audio/wav"
+)
+
 func NewExternalHandler(config *cfg.Properties) *ExternalHandler {
 
 	return &ExternalHandler{
@@ -64,19 +69,19 @@ func (e *ExternalHandler) SendImageToML(c *gin.Context) {
 		requestParams)
 	// Return the processed image
 	if result != nil {
-		c.Data(http.StatusOK, "image/png", result.([]byte))
+		c.Data(http.StatusOK, contentTypeImage, result.([]byte))
 	}
 }
 
 func (e *ExternalHandler) SendMessageToML(c *gin.Context) {
 	var requestBody PostMlBody
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no user in query"})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "no user in query"})
 		return
 	}
 	parsedJSON, err := json.Marshal(&requestBody)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("can not marshal JSON: %e", err)})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "can not marshal JSON:", "error": err.Error()})
 		return
 	}
 	requestParams := []any{parsedJSON}
@@ -88,7 +93,7 @@ func (e *ExternalHandler) SendMessageToML(c *gin.Context) {
 
 	// Return the processed image
 	if result != nil {
-		c.Data(http.StatusOK, "image/png", result.([]byte))
+		c.Data(http.StatusOK, contentTypeImage, result.([]byte))
 	}
 }
 
@@ -100,7 +105,7 @@ func (e *ExternalHandler) SendTrackToML(c *gin.Context) {
 	}
 	parsedJSON, err := json.Marshal(&requestBody)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("can not marshal JSON: %e", err)})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "can not marshal JSON", "error": err.Error()})
 		return
 	}
 	requestParams := []any{parsedJSON}
@@ -112,7 +117,7 @@ func (e *ExternalHandler) SendTrackToML(c *gin.Context) {
 
 	// Return the processed image
 	if result != nil {
-		c.Data(http.StatusOK, "audio/wav", result.([]byte))
+		c.Data(http.StatusOK, contentTypeAudio, result.([]byte))
 	}
 }
 
@@ -130,7 +135,7 @@ func (e *ExternalHandler) SendMelodyToML(c *gin.Context) {
 		[]string{"audio"},
 		requestParams)
 	if result != nil {
-		c.Data(http.StatusOK, "audio/wav", result.([]byte))
+		c.Data(http.StatusOK, contentTypeAudio, result.([]byte))
 
 	}
 }
@@ -151,7 +156,7 @@ func (e *ExternalHandler) SendTSToML(c *gin.Context) {
 	if result != nil {
 		result, err := postProcTS(result.([]byte))
 		if err != nil {
-			c.IndentedJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("can not marshal JSON: %e", err)})
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "can not marshal JSON", "error": err.Error()})
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "success", "arrays": result.([]byte)})
 
@@ -210,16 +215,14 @@ func (e *ExternalHandler) sendFormHelper(
 
 	select {
 	case response := <-result:
-		// Return the processed image
-		//c.Data(http.StatusOK, "audio/wav", response.([]byte))
 		return response.([]byte)
 	case err := <-errors:
 		c.IndentedJSON(
-			http.StatusBadRequest,
-			gin.H{"message": fmt.Sprintf("response error: %e", err)})
+			http.StatusInternalServerError,
+			gin.H{"message": "response error", "error": err.Error()})
 	case <-ctx.Done():
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("timeout from server: %s", hostname)})
+			gin.H{"message": "timeout from server", "error": fmt.Sprintf("%s", hostname)})
 	}
 	return nil
 }
@@ -260,16 +263,14 @@ func (e *ExternalHandler) sendJSONHelper(
 		reqParam)
 	select {
 	case response := <-result:
-		// Return the processed image
-		//c.Data(http.StatusOK, "audio/wav", response.([]byte))
 		return response.([]byte)
 	case err := <-errors:
 		c.IndentedJSON(
-			http.StatusBadRequest,
-			gin.H{"message": fmt.Sprintf("response error: %e", err)})
+			http.StatusInternalServerError,
+			gin.H{"message": "response error", "error": err.Error()})
 	case <-ctx.Done():
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("timeout from server: %s", hostname)})
+			gin.H{"message": "timeout", "error": fmt.Sprintf("timeout from server: %s", hostname)})
 	}
 	return nil
 }

@@ -43,7 +43,7 @@ func NewAuthHandler(config *cfg.Properties) *AuthHandler {
 	provider, err := oidc.NewProvider(oauth2.NoContext, config.Auth.Host)
 
 	if err != nil {
-		fmt.Println("Error creating OIDC provider: " + err.Error())
+		log.Printf("Error creating OIDC provider: %e", err)
 	} else {
 		log.Printf("endpoint is %v", provider.Endpoint())
 		// initialize OAuth
@@ -174,7 +174,7 @@ func (a *AuthHandler) Account(c *gin.Context) {
 		return
 	}
 	//TODO: check expiration and redirect to /login
-	fmt.Printf("token is %v", idToken.Expiry)
+	log.Printf("token is %v", idToken.Expiry)
 	var claims struct {
 		Name     string `json:"nickname"`
 		Picture  string `json:"picture"`

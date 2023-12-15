@@ -22,6 +22,8 @@ type MinioS3Client struct {
 	client          *minio.Client
 }
 
+const defaultContentType = "application/octet-stream"
+
 // NewMinioS3Client creates a new MinioS3Client instance.
 func NewMinioS3Client(endpoint, accessKeyID, secretAccessKey, bucketName string, useSSL bool) (*MinioS3Client, error) {
 
@@ -54,7 +56,7 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 	})
 	for object := range objectCh {
 		if object.Err != nil {
-			log.Printf(fmt.Sprintf("%v", object.Err))
+			log.Printf("%v", object.Err)
 			return result, object.Err
 		}
 		// Set request parameters for content-disposition.
@@ -72,7 +74,7 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 			time.Second*24*60*60*7,
 			reqParams)
 		if err != nil {
-			log.Printf(fmt.Sprintf("%e", err))
+			log.Printf("%e", err)
 			return result, err
 		}
 		result = append(result, presignedURL)
@@ -87,7 +89,7 @@ func (s3 *MinioS3Client) UploadFile(uploadPath string, object io.Reader, size in
 		uploadPath,
 		object,
 		int64(size),
-		minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		minio.PutObjectOptions{ContentType: defaultContentType})
 	if err != nil {
 		return fmt.Errorf("some error happened %v", err)
 	}
@@ -99,7 +101,7 @@ func (s3 *MinioS3Client) DeleteFile(fileName string) error {
 	err := s3.client.RemoveObject(context.Background(), s3.bucketName, fileName, opts)
 	log.Printf("remove %s, %s", s3.bucketName, fileName)
 	if err != nil {
-		log.Printf(fmt.Sprintf("%e", err))
+		log.Printf("%e", err)
 		return fmt.Errorf("some error happened %v", err)
 	}
 	return nil

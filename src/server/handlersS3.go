@@ -6,7 +6,6 @@ import (
 	app "goserv/src/app"
 	cfg "goserv/src/configuration"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +30,10 @@ type (
 	}
 )
 
+const (
+	userQueryParam = "user"
+)
+
 var (
 	imageAvaiableFormats = []string{"png", "jpg", "tiff", "bmp"}
 	audioAvaiableFormats = []string{"mp3", "wav", "fb2", "midi"}
@@ -45,16 +48,16 @@ func NewS3Handler(config *cfg.Properties, s3Client *app.MinioS3Client) *AppHandl
 }
 
 func (a *AppHandler) GetImageList(c *gin.Context) {
-	user, ok := c.GetQuery("user")
+	user, ok := c.GetQuery(userQueryParam)
 	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no user in query"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "error", "error": "no user in query"})
 		return
 	}
 	result := []string{}
 	images, err := a.s3.ListObjects(user, imageAvaiableFormats)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not fetch images from s3: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not fetch images from s3: %e", err).Error()})
 
 		return
 	}
@@ -64,23 +67,23 @@ func (a *AppHandler) GetImageList(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not marshall result: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not marshall result: %e", err).Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "payload": result})
 }
 
 func (a *AppHandler) GetAudioList(c *gin.Context) {
-	user, ok := c.GetQuery("user")
+	user, ok := c.GetQuery(userQueryParam)
 	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "no user in query"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "no user in query"})
 		return
 	}
 	result := []string{}
 	tracks, err := a.s3.ListObjects(user, audioAvaiableFormats)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not fetch images from s3: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not fetch images from s3: %e", err).Error()})
 
 		return
 	}
@@ -90,7 +93,7 @@ func (a *AppHandler) GetAudioList(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not marshall result: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not marshall result: %e", err).Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "payload": result})
@@ -101,8 +104,7 @@ func (a *AppHandler) PostImage(c *gin.Context) {
 	// Parse the form data, including the uploaded file
 	file, _, err := c.Request.FormFile("image")
 	if err != nil {
-		log.Printf("error is %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "error", "error": fmt.Errorf("can not find image in request: %e", err).Error()})
 		return
 	}
 	defer file.Close()
@@ -111,14 +113,14 @@ func (a *AppHandler) PostImage(c *gin.Context) {
 	var buffer bytes.Buffer
 	_, err = io.Copy(&buffer, file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "error", "error": fmt.Errorf("Failed to read file:%e", err).Error()})
 		return
 	}
 	if err := a.s3.UploadFile(fmt.Sprintf("%s/%s", c.PostForm("user"), c.PostForm("name")),
 		&buffer,
 		buffer.Len()); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not upload image to s3: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not upload image to s3: %e", err).Error()})
 
 	}
 
@@ -128,13 +130,13 @@ func (a *AppHandler) PostImage(c *gin.Context) {
 func (a *AppHandler) DeleteImage(c *gin.Context) {
 	var requestBody DeleteImageBody
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("cannot delete: %e", err)})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "error", "error": fmt.Errorf("cannot delete: %e", err).Error()})
 		return
 	}
 
 	if err := a.s3.DeleteFile(fmt.Sprintf("%s/%s", requestBody.User, requestBody.Name)); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError,
-			gin.H{"message": fmt.Sprintf("can not delete image from s3: %e", err)})
+			gin.H{"message": "error", "error": fmt.Errorf("can not delete image from s3: %e", err).Error()})
 
 	}
 

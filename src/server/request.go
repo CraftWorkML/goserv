@@ -11,13 +11,14 @@ import (
 )
 
 type (
+	// RequestPipeline defines a pipeline for executing HTTP requests with specified parameters
 	RequestPipeline struct {
 		parametersParser func(restCmd string, endPoint string, params ...any) (*http.Request, error)
 		transport        *http.Transport
 		postProcess      func(responseBody []byte) (any, error)
 	}
 )
-
+// Execute performs the HTTP request according to the configured pipeline
 func (r RequestPipeline) Execute(
 	restCmd string,
 	endPoint string,
