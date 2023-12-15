@@ -30,7 +30,7 @@ func NewMinioS3Client(endpoint, accessKeyID, secretAccessKey, bucketName string,
 		Secure: useSSL,
 	})
 	if err != nil {
-		log.Fatalf("can not create minio client %e with creds %s, %s, %s", err, endpoint, accessKeyID, secretAccessKey)
+		log.Printf("can not create minio client %e with creds %s, %s, %s", err, endpoint, accessKeyID, secretAccessKey)
 		return nil, fmt.Errorf("Failed to create Minio S3 client: %v", err)
 	}
 
@@ -48,19 +48,15 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make([]*url.URL, 0)
 	defer cancel()
-	log.Printf("IMHERERE %s", prefix)
 	objectCh := s3.client.ListObjects(ctx, s3.bucketName, minio.ListObjectsOptions{
 		Prefix:    prefix,
 		Recursive: true,
 	})
-	log.Printf("List got")
 	for object := range objectCh {
 		if object.Err != nil {
 			log.Printf(fmt.Sprintf("%v", object.Err))
 			return result, object.Err
 		}
-		log.Printf("Iterate over %v", object)
-		fmt.Println(object)
 		// Set request parameters for content-disposition.
 		reqParams := make(url.Values)
 		reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", object.Key))
@@ -79,7 +75,6 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 			log.Printf(fmt.Sprintf("%e", err))
 			return result, err
 		}
-		fmt.Println("Successfully generated presigned URL", presignedURL)
 		result = append(result, presignedURL)
 	}
 	return result, nil
@@ -87,7 +82,7 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 
 // UploadFile uploads a file to the specified S3 bucket.
 func (s3 *MinioS3Client) UploadFile(uploadPath string, object io.Reader, size int) error {
-	uploadInfo, err := s3.client.PutObject(context.Background(),
+	_, err := s3.client.PutObject(context.Background(),
 		s3.bucketName,
 		uploadPath,
 		object,
@@ -96,7 +91,6 @@ func (s3 *MinioS3Client) UploadFile(uploadPath string, object io.Reader, size in
 	if err != nil {
 		return fmt.Errorf("some error happened %v", err)
 	}
-	log.Printf("Successfully uploaded bytes: %v", uploadInfo)
 	return nil
 }
 

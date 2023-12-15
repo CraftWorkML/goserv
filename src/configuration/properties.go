@@ -34,7 +34,7 @@ type (
 		Name        string        `env:"NAME" envDefault:"awhs"`
 		NameSpace   string        `env:"NAMESPACE" envDefault:"awhs"`
 		Port        string        `env:"PORT" envDefault:"8088"`
-		ReadTimeout time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
+		ReadTimeout time.Duration `env:"READ_TIMEOUT" envDefault:"600s"`
 	}
 
 	MLServerProperties struct {
@@ -49,7 +49,7 @@ type (
 		AccessKey   string        `env:"ACCESS_KEY"`
 		SecretKey   string        `env:"SECRET_KEY"`
 		Bucket      string        `env:"BUCKET" envDefault:"app"`
-		ReadTimeout time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
+		ReadTimeout time.Duration `env:"READ_TIMEOUT" envDefault:"3600s"`
 	}
 
 	KV8sProperties struct {
