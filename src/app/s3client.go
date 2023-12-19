@@ -13,13 +13,20 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+type ClientMinio interface {
+	ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo
+	PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error)
+	PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (info minio.UploadInfo, err error)
+	RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
+}
+
 type MinioS3Client struct {
 	endpoint        string
 	accessKeyID     string
 	secretAccessKey string
 	useSSL          bool
 	bucketName      string
-	client          *minio.Client
+	client          ClientMinio
 }
 
 const defaultContentType = "application/octet-stream"
@@ -50,10 +57,12 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make([]*url.URL, 0)
 	defer cancel()
+
 	objectCh := s3.client.ListObjects(ctx, s3.bucketName, minio.ListObjectsOptions{
 		Prefix:    prefix,
 		Recursive: true,
 	})
+	fmt.Printf("print client list objects %v", objectCh)
 	for object := range objectCh {
 		if object.Err != nil {
 			log.Printf("%v", object.Err)
