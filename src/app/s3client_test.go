@@ -28,7 +28,7 @@ func (m *MockMinioClient) ListObjects(ctx context.Context, bucketName string, op
 	fmt.Println("print listObjects")
 	args := m.Called(ctx, bucketName, opts)
 	fmt.Println("after called")
-	return args.Get(0).(<-chan minio.ObjectInfo)
+	return args.Get(0).(chan minio.ObjectInfo)
 }
 
 func (m *MockMinioClient) PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error) {
@@ -37,7 +37,7 @@ func (m *MockMinioClient) PresignedGetObject(ctx context.Context, bucketName, ob
 }
 
 func (m *MockMinioClient) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (info minio.UploadInfo, err error) {
-	args := m.Called(ctx, bucketName, objectName, opts)
+	args := m.Called(ctx, bucketName, objectName, reader, objectSize, opts)
 	return args.Get(0).(minio.UploadInfo), args.Error(1)
 }
 
@@ -59,14 +59,17 @@ func TestMinioS3Client(t *testing.T) {
 	}
 
 	// Test ListObjects method
+
 	t.Run("ListObjects", func(t *testing.T) {
 		channel := make(chan minio.ObjectInfo, 1)
+		channel <- minio.ObjectInfo{Key: "Mock"}
+		close(channel)
 		mockMinioClient.On(
 			"ListObjects",
 			mock.Anything,
 			mock.Anything,
 			mock.Anything).
-			Return((<-chan minio.ObjectInfo)(channel))
+			Return(channel)
 		mockMinioClient.On(
 			"PresignedGetObject",
 			mock.Anything,
@@ -74,14 +77,23 @@ func TestMinioS3Client(t *testing.T) {
 			mock.Anything,
 			mock.Anything,
 			mock.Anything).
-			Return((*url.URL)(nil))
+			Return(&url.URL{}, nil)
 		objects, err := mockConfig.ListObjects("", nil)
 		assert.NoError(t, err, "ListObjects() returned an error")
-		assert.Len(t, objects, 2, "ListObjects() did not return the expected number of objects")
+		assert.Len(t, objects, 1, "ListObjects() did not return the expected number of objects")
 	})
 
 	// Test UploadFile method
 	t.Run("UploadFile", func(t *testing.T) {
+		mockMinioClient.On(
+			"PutObject",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything).Return(minio.UploadInfo{}, nil)
+
 		fileContent := []byte("Hello, World!")
 		reader := bytes.NewReader(fileContent)
 		err := mockConfig.UploadFile("test.txt", reader, len(fileContent))
@@ -90,6 +102,13 @@ func TestMinioS3Client(t *testing.T) {
 
 	// Test DeleteFile method
 	t.Run("DeleteFile", func(t *testing.T) {
+		mockMinioClient.On(
+			"RemoveObject",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything).Return(nil)
+
 		err := mockConfig.DeleteFile("test.txt")
 		assert.NoError(t, err, "DeleteFile() returned an error")
 	})
