@@ -1,7 +1,6 @@
 package repository
 
 import (
-	//"time"
 	"fmt"
 	cfg "goserv/src/configuration"
 	"log"
@@ -42,7 +41,6 @@ func (i *InMemoryDB) UploadUser(accessToken, refreshToken string) error {
 }
 
 func (i *InMemoryDB) VerifyUser(accessToken string) bool {
-	log.Printf("verify a user %v to db %v", accessToken, i.table)
 	if i.table == nil {
 		return false
 	}

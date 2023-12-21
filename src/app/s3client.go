@@ -13,14 +13,23 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+type ClientMinio interface {
+	ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo
+	PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error)
+	PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (info minio.UploadInfo, err error)
+	RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
+}
+
 type MinioS3Client struct {
 	endpoint        string
 	accessKeyID     string
 	secretAccessKey string
 	useSSL          bool
 	bucketName      string
-	client          *minio.Client
+	client          ClientMinio
 }
+
+const defaultContentType = "application/octet-stream"
 
 // NewMinioS3Client creates a new MinioS3Client instance.
 func NewMinioS3Client(endpoint, accessKeyID, secretAccessKey, bucketName string, useSSL bool) (*MinioS3Client, error) {
@@ -30,7 +39,7 @@ func NewMinioS3Client(endpoint, accessKeyID, secretAccessKey, bucketName string,
 		Secure: useSSL,
 	})
 	if err != nil {
-		log.Fatalf("can not create minio client %e with creds %s, %s, %s", err, endpoint, accessKeyID, secretAccessKey)
+		log.Printf("can not create minio client %e with creds %s, %s, %s", err, endpoint, accessKeyID, secretAccessKey)
 		return nil, fmt.Errorf("Failed to create Minio S3 client: %v", err)
 	}
 
@@ -48,19 +57,17 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make([]*url.URL, 0)
 	defer cancel()
-	log.Printf("IMHERERE %s", prefix)
+
 	objectCh := s3.client.ListObjects(ctx, s3.bucketName, minio.ListObjectsOptions{
 		Prefix:    prefix,
 		Recursive: true,
 	})
-	log.Printf("List got")
+	fmt.Printf("print client list objects %v", objectCh)
 	for object := range objectCh {
 		if object.Err != nil {
-			log.Printf(fmt.Sprintf("%v", object.Err))
+			log.Printf("%v", object.Err)
 			return result, object.Err
 		}
-		log.Printf("Iterate over %v", object)
-		fmt.Println(object)
 		// Set request parameters for content-disposition.
 		reqParams := make(url.Values)
 		reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", object.Key))
@@ -76,10 +83,9 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 			time.Second*24*60*60*7,
 			reqParams)
 		if err != nil {
-			log.Printf(fmt.Sprintf("%e", err))
+			log.Printf("%e", err)
 			return result, err
 		}
-		fmt.Println("Successfully generated presigned URL", presignedURL)
 		result = append(result, presignedURL)
 	}
 	return result, nil
@@ -87,16 +93,15 @@ func (s3 *MinioS3Client) ListObjects(prefix string, filters []string) ([]*url.UR
 
 // UploadFile uploads a file to the specified S3 bucket.
 func (s3 *MinioS3Client) UploadFile(uploadPath string, object io.Reader, size int) error {
-	uploadInfo, err := s3.client.PutObject(context.Background(),
+	_, err := s3.client.PutObject(context.Background(),
 		s3.bucketName,
 		uploadPath,
 		object,
 		int64(size),
-		minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		minio.PutObjectOptions{ContentType: defaultContentType})
 	if err != nil {
 		return fmt.Errorf("some error happened %v", err)
 	}
-	log.Printf("Successfully uploaded bytes: %v", uploadInfo)
 	return nil
 }
 
@@ -105,7 +110,7 @@ func (s3 *MinioS3Client) DeleteFile(fileName string) error {
 	err := s3.client.RemoveObject(context.Background(), s3.bucketName, fileName, opts)
 	log.Printf("remove %s, %s", s3.bucketName, fileName)
 	if err != nil {
-		log.Printf(fmt.Sprintf("%e", err))
+		log.Printf("%e", err)
 		return fmt.Errorf("some error happened %v", err)
 	}
 	return nil

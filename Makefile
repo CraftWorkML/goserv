@@ -5,7 +5,7 @@ version = $(majorVersion).$(minorVersion).$(patchVersion)
 
 binaryPath = ./target/
 registry = registry.com
-image = v8s-controller
+image = app
 tag = deploy-$(version)
 
 update-path:
@@ -20,10 +20,10 @@ test:
 	go test ./...
 
 docker-build:
-	docker build -t $(registry)/admissionwebhook:$(tag) . --build-arg binaryVersion=$(version)
+	docker build -t $(registry)/app:$(tag) . --build-arg binaryVersion=$(version)
 
 docker-push:
-	docker push $(registry)/admissionwebhook:$(tag)
+	docker push $(registry)/app:$(tag)
 
 deploy:
 	kubectl apply -f ./manifests/serviceaccount.yaml -n awhs && \
@@ -31,14 +31,6 @@ deploy:
 	kubectl apply -f ./manifests/clusterrolebinding.yaml -n awhs && \
 	kubectl apply -f ./manifests/service.yaml -n awhs && \
 	kubectl apply -f ./manifests/deployment.yaml -n awhs
-
-delete:
-	kubectl delete  MutatingWebhookConfiguration awhs-service && \
-	kubectl delete -f ./manifests/deployment.yaml -n awhs && \
-	kubectl delete -f ./manifests/clusterrolebinding.yaml -n awhs && \
-	kubectl delete -f ./manifests/service.yaml -n awhs && \
-	kubectl delete -f ./manifests/clusterrole.yaml -n awhs && \
-	kubectl delete -f ./manifests/serviceaccount.yaml -n awhs
 	
 	
 	

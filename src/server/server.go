@@ -19,9 +19,29 @@ func RunServer(config *cfg.Properties) {
 	router := gin.Default()
 	//
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Cache-Control", "Access-Control-Allow-Origin", "access-control-allow-headers", "Origin", "User-Agent", "Referrer", "Host", "Token"},
+		AllowOrigins: []string{"http://localhost:3000"},
+		AllowMethods: []string{
+			"GET",
+			"HEAD",
+			"POST",
+			"PUT",
+			"DELETE",
+			"OPTIONS",
+			"PATCH"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"Authorization",
+			"Cache-Control",
+			"Access-Control-Allow-Origin",
+			"access-control-allow-headers",
+			"Origin",
+			"User-Agent",
+			"Referrer",
+			"Host",
+			"Token"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowOriginFunc:  func(origin string) bool { return true },
 		AllowCredentials: true,
@@ -38,28 +58,33 @@ func RunServer(config *cfg.Properties) {
 		log.Printf("Error: could not connect to minio %e", err)
 	}
 	// Instantiate recipe Handler and provide a data store implementation
-	handler := NewHandler(config, clientS3)
+	handlerAuth := NewAuthHandler(config)
+	handlerS3 := NewS3Handler(config, clientS3)
+	handlerExternal := NewExternalHandler(config)
 
 	// Register Routes
-	router.GET("/health", handler.GetHealth)
-	router.GET("/", handler.Root)
-	router.GET("/login", handler.Login)
-	router.GET("/singin", handler.Singin)
-	router.GET("/logout", handler.Logout)
-	router.GET("/callback", handler.Callback)
-	router.GET("/account", handler.Account)
-	router.GET("/images", handler.GetImageList)
-	router.GET("/tracks", handler.GetAudioList)
-	router.POST("/image", handler.PostImage)
-	router.POST("/ml/image", handler.SendImageToML)
-	router.POST("/ml/ts", handler.SendTSToML)
-	router.POST("/ml/track", handler.SendTrackToML)
-	router.POST("/ml/melody", handler.SendMelodyToML)
-	router.POST("/ml/message", handler.SendMessageToML)
-
-	router.DELETE("/images", handler.DeleteImage)
-
+	router.GET("/health", handlerAuth.GetHealth)
+	router.GET("/", handlerAuth.Root)
+	router.GET("/login", handlerAuth.Login)
+	router.GET("/singin", handlerAuth.Singin)
+	router.GET("/logout", handlerAuth.Logout)
+	router.GET("/callback", handlerAuth.Callback)
+	router.GET("/account", handlerAuth.Account)
+	router.GET("/images", handlerS3.GetImageList)
+	router.GET("/tracks", handlerS3.GetAudioList)
+	router.POST("/image", handlerS3.PostImage)
+	router.DELETE("/images", handlerS3.DeleteImage)
 	router.NoRoute(func(ctx *gin.Context) { ctx.JSON(http.StatusNotFound, gin.H{}) })
+	// Simple group: v2
+	ml := router.Group("/ml")
+	{
+		ml.POST("/image", handlerExternal.SendImageToML)
+		ml.POST("/ts", handlerExternal.SendTSToML)
+		ml.POST("/track", handlerExternal.SendTrackToML)
+		ml.POST("/melody", handlerExternal.SendMelodyToML)
+		ml.POST("/message", handlerExternal.SendMessageToML)
+	}
+
 	pprof.Register(router)
 	// Start the server
 	router.Run(fmt.Sprintf(":%s", config.Server.Port))

@@ -10,5 +10,6 @@ vendor/
 *.pem
 *.tar
 *.env
+main.exe
 kubeconfig*
 coverage*
