@@ -18,6 +18,7 @@ type (
 		postProcess      func(responseBody []byte) (any, error)
 	}
 )
+
 // Execute performs the HTTP request according to the configured pipeline
 func (r RequestPipeline) Execute(
 	restCmd string,
